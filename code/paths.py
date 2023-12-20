@@ -1,0 +1,5 @@
+ROOT_RESULTS_DQN_TRAINING_CHECKPOINTS = '../../results/DQN/training_checkpoints/'
+ROOT_RESULTS_DQN_TRAINING_RESULTS = '../../results/DQN/training_results/'
+ROOT_RESULTS_PCD_INFERENCE_GRID_INSTANTS = '../../results/PCD/inference_grid_instants/'
+ROOT_RESULTS_DQN_INFERENCE_RESULTS = '../../results/DQN/inference_results/'
+ROOT_RESULTS_PCD_INFERENCE_RESULTS = '../../results/PCD/inference_results/'
