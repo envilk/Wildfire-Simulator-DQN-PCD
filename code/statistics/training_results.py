@@ -16,7 +16,8 @@ buffer = io.StringIO()
 num_agents = 1
 EPISODE_REWARD_MEANS = []
 MEANS_EPISODE_REWARD_MEANS = []
-with open(str(num_agents) + 'UAV_training_results.txt', 'r') as fd:
+root = "../../results/DQN/training_results/"
+with open(root + str(num_agents) + 'UAV_training_results.txt', 'r') as fd:
     [EPISODE_REWARD_MEANS.append(ast.literal_eval(line)) for line in fd.readlines()]
 
 [MEANS_EPISODE_REWARD_MEANS.append(statistics.mean(e)) for e in EPISODE_REWARD_MEANS]
