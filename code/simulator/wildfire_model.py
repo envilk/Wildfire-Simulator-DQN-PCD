@@ -51,7 +51,7 @@ class WildFireModel(mesa.Model):
         # FIXME extracted from 'nn_learning_process.py', might not be correct
         #  | used when inference is activated for both, interface and auto evaluation
         self.policy_net = nn_definitions.DQN().to(DEVICE)
-        if INFERENCE and not RNN:
+        if INFERENCE and not RNN and not HORIZON_EVAL:
             self.policy_net.load_state_dict(torch.load('../../results/DQN/training_checkpoints/' + str(self.NUM_AGENTS)
                                                        + '_drones_checkpoint_policy_net15000.pth'))
             self.policy_net.eval()

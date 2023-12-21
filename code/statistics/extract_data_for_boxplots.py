@@ -11,9 +11,9 @@ data_PCD_MR1 = []
 data_DQN_MR2 = []
 data_PCD_MR2 = []
 labels = []
-for dirpath, dirnames, filenames in os.walk("."):
-    if dirpath.startswith("./pruebas_") and dirpath.endswith("0"):
-        print(dirpath)
+for dirpath, dirnames, filenames in os.walk("../../"):
+    if (dirpath.startswith("../../results/DQN/") or
+            dirpath.startswith("../../results/PCD/")) and dirpath.endswith("inference_results"):
         labels.append(dirpath)
 
 labels.sort()
@@ -34,7 +34,7 @@ for num_dir, (dirname_entrenamiento, dirname_predictor) in enumerate(pairwise([s
         to_insert_p_MR1 = []
         to_insert_p_MR2 = []
 
-        f_MR1 = '0_' + str(UAV_idx+1) + 'UAV.txt'
+        f_MR1 = str(UAV_idx+1) + 'UAV.txt'
         f_MR2 = 'COUNTER_' + str(UAV_idx + 1) + 'UAV.txt'
 
         print('--------')
