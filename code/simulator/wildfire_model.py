@@ -90,7 +90,7 @@ class WildFireModel(mesa.Model):
         plt.figure(1)
         if show_result:
             plt.title('Result')
-            with open('../../results/DQN/training_results/' + str(self.NUM_AGENTS) + 'UAV_training_results.txt', 'w') as f:
+            with open(ROOT_RESULTS_DQN_TRAINING_RESULTS + str(self.NUM_AGENTS) + 'UAV_training_results.txt', 'w') as f:
                 print(self.EPISODE_REWARD_MEANS)
                 to_write = [str(reward) + '\n' for reward in self.EPISODE_REWARD_MEANS]
                 f.writelines(to_write)
