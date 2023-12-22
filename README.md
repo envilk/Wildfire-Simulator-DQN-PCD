@@ -2,7 +2,7 @@
 
 ## Project description
 
-This repository holds a Predictive Coordinate Descent (PCD) algorithm, and a Deep Q-Network (DQN) algorithm, in order to enable decentralized proactive self-adaptation in Smart Cyber-Physical Systems (sCPS). Concretely, these algorithms were tested in wildfire tracking adaptation scenarios, included in Unmanned Aerial Vehicles (UAV). For simulating UAV systems and different uncertain widlfire scenarios, Wildfire-UAVSim is used in this repository, which consists in a customizable wildfire tracking simulator that enables the evaluation of diverse adaptation strategies. For further description of the Wildfire-UAVSim simulator check [its repository](https://anonymous.4open.science/r/Wildfire-UAVSim-E758/).
+This repository holds a Predictive Coordinate Descent (PCD) algorithm, and a Deep Q-Network (DQN) algorithm, in order to enable decentralized proactive self-adaptation in Smart Cyber-Physical Systems (sCPS). Concretely, these algorithms were tested in wildfire tracking adaptation scenarios, included in Unmanned Aerial Vehicles (UAV). For simulating UAV systems and different uncertain wildfire scenarios, Wildfire-UAVSim is used in this repository, which consists of a customizable wildfire tracking simulator that enables the evaluation of diverse adaptation strategies. For further description of the Wildfire-UAVSim simulator check [its repository](https://anonymous.4open.science/r/Wildfire-UAVSim-E758/).
 
 ## Project structure
 
@@ -44,8 +44,8 @@ The project contains the following structure:
 
 | Directory | Description |
 |----------|----------|
-| `./DQN/` | This directory includes python files for managing the logic of the DQN algirhtm |
-| `./PCD/` | This directory includes python files for managing the logic of the PCD algirhtm |
+| `./DQN/` | This directory includes python files for managing the logic of the DQN algorithm |
+| `./PCD/` | This directory includes python files for managing the logic of the PCD algorithm |
 | `./simulator/` | This directory includes python files for managing the simulator |
 | `./mesa_addons/` | This directory includes python files for adding functionalities to some mesa classes |
 | `./statistics/` | This directory includes python files for generating statistics about different executions of the project |
@@ -63,11 +63,11 @@ The project contains the following structure:
 | `Canvas_Grid_Visualization.py` | This python file contains a Mesa class, modified for making UAV observation areas visible on the graphical web interface. It is not really necessary to change this file. |
 | `Space_Grid_Setter_Getter.py` | This python file contains a Mesa class, modified for making a concrete functionality of PCD work properly. It is not really necessary to change this file |
 | `box_diagram_MR1_MR2.py` | This python file contains the logic to show box plot statistics of the two defined metrics MR1 and MR2 |
-| `box_diagram_MR1_MR2_degradations.py` | This python file is a pretty similar adaptation of `box_diagram_MR1_MR2.py`, but allowing to plot statistics of several PCD degradations |
+| `box_diagram_MR1_MR2_degradations.py` | This python file is a pretty similar adaptation of `box_diagram_MR1_MR2.py`, but allows to plot statistics of several PCD degradations |
 | `extract_data_for_boxplots.py` | This python file contains the logic to extract data for plotting in `box_diagram_MR1_MR2.py` |
 | `extract_data_for_boxplots_degradations.py` | This python file contains the logic to extract data for plotting in `box_diagram_MR1_MR2_degradations.py` |
 | `training_results.py` | This python file contains the logic for plotting training metrics |
-| `paths.py` | This python file define variables containing paths globally used in the project |
+| `paths.py` | This python file defines variables containing paths globally used in the project |
 
 ### results folder
 
@@ -85,21 +85,21 @@ In the following subsections, the installation process for executing the project
 
 ## Installing Pycharm Community Edition IDE
 
-The first step is to download and install Pycharm Community Edition IDE to easily run and setup the project and its dependencies. For Linux users (this project was initially tested on Ubuntu 22.04.2 LTS), they can use the `snap` command in cmd (pre-installed from Ubuntu 16.04 LTS and later) as a fast installation option. Users must execute the command `sudo snap install pycharm-community --classic` in cmd for installing Pycharm Community Edition.
+The first step is to download and install Pycharm Community Edition IDE to easily run and set up the project and its dependencies. For Linux users (this project was initially tested on Ubuntu 22.04.2 LTS), they can use the `snap` command in cmd (pre-installed from Ubuntu 16.04 LTS and later) as a fast installation option. Users must execute the command `sudo snap install pycharm-community --classic` in cmd for installing Pycharm Community Edition.
 
 Despite this project was initially tested on Ubuntu 22.04.2 LTS, it has been later tested on Windows and Mac too. For checking system requirements, and information about the installation process, please visit https://www.jetbrains.com/help/pycharm/installation-guide.html.
 
 ## Opening the project
 
-First extract the Wildfire-Simulator-DQN-PCD downloaded package in any folder. Second, open Pycharm by executing the command `pycharm-community` in cmd, or searching for the executable in the computer.
-Then, the projects window should be opened. Next, the user has to click on `Open`, select the extracted project folder, and click `OK`. A window should appear to select between light editor, and project editor.
+First, extract the Wildfire-Simulator-DQN-PCD downloaded package in any folder. Second, open Pycharm by executing the command `pycharm-community` in cmd, or searching for the executable in the computer.
+Then, the project window should be opened. Next, the user has to click on `Open`, select the extracted project folder, and click `OK`. A window should appear to select between light editor, and project editor.
 Select project editor. For openning the project more times, repeat same process.
 
 ## Installing dependencies
 
 Once the project is opened, some dependencies are necessary. To install them, first go to `Settings > Project > Python Interpreter`, then select the desired Python interpreter
-for executing the project. As default `/usr/bin/python3.10` should appear in the `Python Interpreter:` tab, which already contain some default dependencies if Ubuntu 22.04.2 LTS is installed. For other Python interpreters,
-other dependencies may be needed to be installed. On the same Pycharm configuration window, click on `+` icon, and search for the following dependencies (the user should specify the same version as the one used when developing the project. Version can be specified by clicking on the "Specify version" checkbox):
+for executing the project. As default `/usr/bin/python3.10` should appear in the `Python Interpreter:` tab, which already contains some default dependencies if Ubuntu 22.04.2 LTS is installed. For other Python interpreters,
+other dependencies may need to be installed. On the same Pycharm configuration window, click on `+` icon, and search for the following dependencies (the user should specify the same version as the one used when developing the project. Version can be specified by clicking on the "Specify version" checkbox):
 
 <ul>
   <li>Mesa (v.1.2.1)</li>
@@ -115,13 +115,13 @@ Extra dependencies not included in the list might be needed. In that case, follo
 
 # Execution of the project
 
-Once installation set up is completed, `main.py` can be executed by selecting the file inside `./code/simulator/` folder, right mouse click, and clicking on `Run 'main'` (shortcut should be `Ctrl+Shift+F10`).
+Once the installation setup is completed, `main.py` can be executed by selecting the file inside `./code/simulator/` folder, right mouse click, and clicking on `Run 'main'` (shortcut should be `Ctrl+Shift+F10`).
 
 ## Graphical interface functionalities
 
 When executing the project as explained above, a web page hosted in http://127.0.0.1:8521/ should appear in user's default browser. Port can be modified in `main.py` file if user has the default one already busy.
 
-The relevant graphical interface elements are show in the following table:
+The relevant graphical interface elements are shown in the following table:
 
 | Element | Description |
 |----------|----------|
@@ -129,7 +129,7 @@ The relevant graphical interface elements are show in the following table:
 | `Start button` | The start button allows to run the simulation without stopping. |
 | `Step button` | The step button allows to execute one time step at a time. |
 | `Reset button` | The reset button allows to execute the `reset()` method, inherited and overwritten from Mesa framework class `mesa.Model`, into WildFireModel class, inside `widlfire_model.py` file. |
-| `Frames per second` | It is a slider that allows to set the frames per second (FPS) velocity for the graphical visualization of the simulation execution. Each frame corresponds to one time step. Its range goes from 1 to 20 FPS, taking into account that, counterintuitively, 0 FPS set the fastest FPS velocity. One reason why the simulation might seem not be playing fluently could be the setting of the `FIRE_SPREAD_SPEED` variable referenced below. |
+| `Frames per second` | It is a slider that allows to set the frames per second (FPS) velocity for the graphical visualization of the simulation execution. Each frame corresponds to one time step. Its range goes from 1 to 20 FPS, taking into account that, counterintuitively, 0 FPS sets the fastest FPS velocity. One reason why the simulation might seem not be playing fluently could be the setting of the `FIRE_SPREAD_SPEED` variable referenced below. |
 | `Current step counter` | Indicates the current time step of the simulation. |
 
 ## Project execution options
@@ -148,21 +148,69 @@ By executing `main.py` file, a list of different execution options should appear
 SELECT AN OPTION (introduce an int number):
 ```
 
-`1. Train DQN` This option allows to train DQN algorithm. Concretely, model checkpoints will appear in `.results/DQN/training_checkpoints/` directory. Take into account that when executing options for doing inference with DQN, model checkpoints in this directory will be used (**by default, pre-loaded model checkpoints for testing with each UAV amount, are hold in the repository. Take into account that these checkpoints were obtained from training DQN on normal conditions scenarios**). Also, training metrics results will appear in `.results/DQN/training_results/` directory, in the shape of files such as `*UAV_training_results.txt`, for each corresponding UAV amount.
+`1. Train DQN` This option allows to train DQN algorithm. Concretely, model checkpoints will appear in `.results/DQN/training_checkpoints/` directory. Take into account that when executing options for doing inference with DQN, model checkpoints in this directory will be used (**by default, pre-loaded model checkpoints for testing with each UAV amount, are held in the repository. Take into account that these checkpoints were obtained from training DQN on normal conditions scenarios**). Also, training metrics results will appear in `.results/DQN/training_results/` directory, in the shape of files such as `*UAV_training_results.txt`, for each corresponding UAV amount.
 
-`2. DQN automatic evaluation` This option will execute an automatic process for evaluating DQN performance in a certain wildfire scenario. Concretely, results will appear in `.results/DQN/inference_results/` directory, in the shape of folders such as `*UAV_run_rewards` (including statistics plotting each obtained reward with respect to its corresponding time step, for each simulation), files such as `*UAV.txt` (each row is the result of obtaining effective wildfire monitoring metric on each simulation), and such as `COUNTER_*UAV.txt` (each row is the result of obtaining collision risk avoidance metric on each simulation), for each UAV amount, respectively.
+`2. DQN automatic evaluation` This option will execute an automatic process for evaluating DQN performance in a certain wildfire scenario. Concretely, results will appear in `.results/DQN/inference_results/` directory, in the shape of folders such as `*UAV_run_rewards` (including statistics plotting each obtained reward concerning its corresponding time step, for each simulation), files such as `*UAV.txt` (each row is the result of obtaining effective wildfire monitoring metric MR1, on each simulation), and such as `COUNTER_*UAV.txt` (each row is the result of obtaining collision risk avoidance metric MR2, on each simulation), for each UAV amount, respectively.
 
-`3. PCD automatic evaluation` This option will execute an automatic process for evaluating PCD performance in a certain wildfire scenario. Concretely, results will appear in `.results/PCD/inference_results/` directory, in the shape of folders such as `*UAV_run_rewards` (including statistics plotting each obtained reward with respect to its corresponding time step, for each simulation), files such as `*UAV.txt` (each row is the result of obtaining effective wildfire monitoring metric on each simulation), and such as `COUNTER_*UAV.txt` (each row is the result of obtaining collision risk avoidance metric on each simulation), for each UAV amount, respectively. Also, for PCD automatic evaluation, each grid time step of each simulation will be plot in `.results/PCD/inference_grid_instants/` (since it has not graphical web interface evaluation).
+`3. PCD automatic evaluation` This option will execute an automatic process for evaluating PCD performance in a certain wildfire scenario. Concretely, results will appear in `.results/PCD/inference_results/` directory, in the shape of folders such as `*UAV_run_rewards` (including statistics plotting each obtained reward concerning its corresponding time step, for each simulation), files such as `*UAV.txt` (each row is the result of obtaining effective wildfire monitoring metric MR1, on each simulation), and such as `COUNTER_*UAV.txt` (each row is the result of obtaining collision risk avoidance metric MR2, on each simulation), for each UAV amount, respectively. Also, for PCD automatic evaluation, each grid time step of each simulation will be plotted in `.results/PCD/inference_grid_instants/` (since it has no graphical web interface evaluation).
 
-`4. Random selection automatic evaluation (future RNN/LSTM/etc)` This option will execute an automatic process for evaluating random selection performance in a certain wildfire scenario. Concretely, results will appear in `.results/DQN/inference_results/` directory (**random selection has not its own directory**), in the shape of folders such as `*UAV_run_rewards` (including statistics plotting each obtained reward with respect to its corresponding time step, for each simulation), files such as `*UAV.txt` (each row is the result of obtaining effective wildfire monitoring metric on each simulation), and such as `COUNTER_*UAV.txt` (each row is the result of obtaining collision risk avoidance metric on each simulation), for each UAV amount, respectively.
+`4. Random selection automatic evaluation (future RNN/LSTM/etc)` This option will execute an automatic process for evaluating random selection performance in a certain wildfire scenario. Concretely, results will appear in `.results/DQN/inference_results/` directory (**random selection does not have its directory**), in the shape of folders such as `*UAV_run_rewards` (including statistics plotting each obtained reward concerning its corresponding time step, for each simulation), files such as `*UAV.txt` (each row is the result of obtaining effective wildfire monitoring metric on each simulation), and such as `COUNTER_*UAV.txt` (each row is the result of obtaining collision risk avoidance metric on each simulation), for each UAV amount, respectively.
 
-`5. DQN interface evaluation` This option will execute the graphical web interface for evaluating DQN algorithm. Also, statistics will be plot in the shape of images, such as `*_EVAL_drones_pyfoo.svg` for the concrete UAV amount. Statistics will plot each obtained reward with respect to its corresponding time step, for each simulation.
+`5. DQN interface evaluation` This option will execute the graphical web interface for evaluating DQN algorithm. Also, statistics will be plotted in the shape of images, such as `*_EVAL_drones_pyfoo.svg` for the concrete UAV amount. Statistics will plot each obtained reward concerning its corresponding time step, for each simulation.
 
-`6. Random selection interface evaluation (future RNN/LSTM/etc)` This option will execute the graphical web interface for evaluating random selection. Also, statistics will be plot in the shape of images, such as `*_EVAL_drones_pyfoo.svg` for the concrete UAV amount. Statistics will plot each obtained reward with respect to its corresponding time step, for each simulation.
+`6. Random selection interface evaluation (future RNN/LSTM/etc)` This option will execute the graphical web interface for evaluating random selection. Also, statistics will be plotted in the shape of images, such as `*_EVAL_drones_pyfoo.svg` for the concrete UAV amount. Statistics will plot each obtained reward concerning its corresponding time step, for each simulation.
 
 ## Statistics execution options
 
-Lorem ipsum ...
+Statistics are shown through Python files contained in `./DQN/statistics/` directory, namely:
+
+`extract_data_for_boxplots.py` This file allows to extract data for both metrics, MR1 and MR2, to quantify DQN and PCD performances. An output example from Pycharm console when executing the file, can be seen below.
+
+```
+[[28.044979095458984], [31.39619731903076], [30.931952158610027]]
+[[30.826993942260742], [32.96366786956787], [32.67935434977213]]
+[[0.0], [21.0], [37.0]]
+[[0.0], [12.0], [22.0]]
+```
+
+Specifically, the first two lists correspond to DQN and PCD MR1 metrics, respectively. The two following lists correspond to DQN and PCD MR2 metrics, respectively. There should be three lists inside each mentioned list, to test each UAV amount.
+
+`box_diagram_MR1_MR2.py` This file allows to save a box plot in `.pdf` format, to compare DQN and PCD performance, based on MR1 and MR2 metrics. First, to show the box plot, data extracted with `extract_data_for_boxplots.py` must be manually set as input. The correspondences (assigning values to variables) between shown lists and box plot variables can be seen in the table below (**example values from `extract_data_for_boxplots.py` are the same as the ones shown above**):
+
+| Values from `extract_data_for_boxplots.py` | Variables from `box_diagram_MR1_MR2.py` |
+|----------|----------|
+| `[[28.044979095458984], [31.39619731903076], [30.931952158610027]]` | DQN_MR1_data |
+| `[[30.826993942260742], [32.96366786956787], [32.67935434977213]]` | PCD_MR1_data |
+| `[[0.0], [21.0], [37.0]]` | DQN_MR2_data |
+| `[[0.0], [12.0], [22.0]]` | PCD_MR2_data |
+
+`extract_data_for_boxplots_degradations.py` This file allows to extract data for both metrics, MR1 and MR2, to quantify PCD performance when it is degraded with three degradation intensities (LOW, MEDIUM, HIGH). For extracting the data, several steps must be manually developed before executing the file. First, the project folder must be copied three times, renamed with names `Wildfire-Simulator-DQN-PCD-A` (LOW intensity), `Wildfire-Simulator-DQN-PCD-B` (MEDIUM intensity), and `Wildfire-Simulator-DQN-PCD-C` (HIGH intensity), respectively. Then, tweak degradation variables from each project to fit each intensity grade (the user can use default intensity values, then set NOISE = True, and tweak OMEGA variable assignation with its corresponding value in each project), and run each project's automatic evaluation process. Lastly, execute `extract_data_for_boxplots_degradations.py` from any copied project. Once this process has finished, the user can rename the project with its default name. An output example from Pycharm console when executing the file, can be seen below.
+
+```
+[[29.826993942260742], [30.06366786956787], [27.67935434977213]]
+[[22.126993942260742], [23.86366786956787], [23.47935434977213]]
+[[20.826993942260742], [22.96366786956787], [22.27935434977213]]
+[[0.0], [9.0], [34.0]]
+[[0.0], [14.0], [60.0]]
+[[0.0], [18.0], [78.0]]
+```
+
+Specifically, the first three lists correspond to PCD MR1 metrics, with LOW, MEDIUM, and HIGH grades of degradation, respectively. The three following lists correspond to PCD MR2 metrics, with LOW, MEDIUM, and HIGH grades of degradation, respectively. There should be three lists inside each mentioned list, to test each UAV amount.
+
+`box_diagram_MR1_MR2_degradations.py` This file allows to save a box plot in `.pdf` format, to compare DQN and PCD degraded performances, based on MR1 and MR2 metrics. First, to show the box plot, data extracted with `extract_data_for_boxplots_degradations.py` must be manually set as input. The correspondences (assigning values to variables) between shown lists and box plot variables can be seen in the table below (**example values from `extract_data_for_boxplots_degradations.py` are the same as the ones shown above, as well as DQN examples from `extract_data_for_boxplots.py`**):
+
+| File | Values | Variables from `box_diagram_MR1_MR2_degradations.py` |
+|----------|----------|----------|
+| `extract_data_for_boxplots.py` | `[[28.044979095458984], [31.39619731903076], [30.931952158610027]]` | DQN_MR1 |
+| `extract_data_for_boxplots_degradations.py` | `[[29.826993942260742], [30.06366786956787], [27.67935434977213]]` | LOW_MR1 |
+| `extract_data_for_boxplots_degradations.py` | `[[22.126993942260742], [23.86366786956787], [23.47935434977213]]` | MEDIUM_MR1 |
+| `extract_data_for_boxplots_degradations.py` | `[[20.826993942260742], [22.96366786956787], [22.27935434977213]]` | HIGH_MR1 |
+| `extract_data_for_boxplots.py` | `[[0.0], [12.0], [36.0]]` | DQN_MR2 |
+| `extract_data_for_boxplots_degradations.py` | `[[0.0], [9.0], [34.0]]` | LOW_MR2 |
+| `extract_data_for_boxplots_degradations.py` | `[[0.0], [14.0], [60.0]]` | MEDIUM_MR2 |
+| `extract_data_for_boxplots_degradations.py` | `[[0.0], [18.0], [78.0]]` | HIGH_MR2 |
+
+`training_results.py` Execute this Python file whenever the DQN training process has finished, and `*UAV_training_results.txt` files are ready in the folder `.results/DQN/training_results/`.
 
 # Annex: Common variables configuration
 
@@ -238,7 +286,7 @@ A scenario with no wind, smoke, or UAV, should appear.
 
 ### Windy conditions (no smoke, wind, no UAV)
 
-Concretely, a scenario with two weak wind components should appear, first with 50% of south component, and a second west component with 50%. In this scenario, neither smoke or UAV should appear.
+Concretely, a scenario with two weak wind components should appear, first with 50% of south component, and a second west component with 50%. In this scenario, neither smoke nor UAV should appear.
 
 | Variable name | Value |
 |----------|----------|
@@ -253,9 +301,9 @@ Concretely, a scenario with two weak wind components should appear, first with 5
 | `FIRST_DIR_PROB` | 0.5 |
 | `MU` | 0.5 |
 
-### Windy and partial observabiliy conditions (smoke, wind, no UAV)
+### Windy and partial observability conditions (smoke, wind, no UAV)
 
-A scenario with strong windy conditions, blowing east, and late short-lasting smoke should appear. Remember that, since the dispelling counter for smoke is set in `Smoke` class by default, inside `agents.py` file, changes should be done to the `self.dispelling_counter_start_value` variable, inside `__init()__` method (`Smoke` class). Keep also in mind that `self.dispelling_counter_start_value + SMOKE_PRE_DISPELLING_COUNTER` should be greater than the amount of fuel assigned to each cell (for taking less risks, compare to `FUEL_UPPER_LIMIT`, which is the maximum possible amount of fuel of each cell), in order to avoid situations in which smoke dissipates before the end of the cell’s burning process.
+A scenario with strong windy conditions, blowing east, and late short-lasting smoke should appear. Remember that, since the dispelling counter for smoke is set in `Smoke` class by default, inside `agents.py` file, changes should be done to the `self.dispelling_counter_start_value` variable, inside `__init()__` method (`Smoke` class). Keep also in mind that `self.dispelling_counter_start_value + SMOKE_PRE_DISPELLING_COUNTER` should be greater than the amount of fuel assigned to each cell (for taking fewer risks, compare to `FUEL_UPPER_LIMIT`, which is the maximum possible amount of fuel of each cell), to avoid situations in which smoke dissipates before the end of the cell’s burning process.
 
 | Variable name | Value |
 |----------|----------|
@@ -295,9 +343,9 @@ A scenario with 3 UAV having big partial areas, with fast long-lasting smoke, sh
 | `self.dispelling_counter_start_value` | 9 |
 | `UAV_OBSERVATION_RADIUS` | 12 |
 
-### Probabaility map
+### Probability map
 
-A scenario with normal conditions should appear. Keep in mind that changing wind conditions will affect to the visualized probabilitites. Also, remember to set 0 UAV when showing the fire probability map.
+A scenario with normal conditions should appear. Keep in mind that changing wind conditions will affect the visualized probabilities. Also, remember to set 0 UAV when showing the fire probability map.
 
 | Variable name | Value |
 |----------|----------|
