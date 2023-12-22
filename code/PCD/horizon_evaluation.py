@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('../')
 sys.path.append('../simulator/')
-sys.path.append('../source_modified/')
+sys.path.append('../mesa_addons/')
 
 import agents
 from Space_Grid_Setter_Getter import MultiGrid

@@ -1,11 +1,8 @@
-import numpy
 from dash import Dash, dcc, html
 import plotly.express as px
-import csv
 import ast
 import statistics
 import pandas as pd
-import matplotlib as mpl
 from base64 import b64encode
 import io
 

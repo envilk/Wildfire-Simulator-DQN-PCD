@@ -1,8 +1,5 @@
 # Import libraries
-import matplotlib.pyplot as plt
-import pandas
 import numpy
-import plotly.express as px
 import os
 import json
 
