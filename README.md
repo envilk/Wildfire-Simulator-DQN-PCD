@@ -2,7 +2,7 @@
 
 ## Project description
 
-This repository holds a Predictive Coordinate Descent (PCD) algorithm, and a Deep Q-Network (DQN) algorithm, in order to enable decentralized proactive self-adaptation in Smart Cyber-Physical Systems (sCPS). Concretely, these algorithms were tested in wildfire tracking adaptation scenarios, included in Unmanned Aerial Vehicles (UAV). For simulating UAV systems and different uncertain wildfire scenarios, Wildfire-UAVSim is used in this repository, which consists of a customizable wildfire tracking simulator that enables the evaluation of diverse adaptation strategies. For further description of the Wildfire-UAVSim simulator check [its repository](https://anonymous.4open.science/r/Wildfire-UAVSim-E758/).
+This repository holds a Predictive Coordinate Descent (PCD) algorithm, and a Deep Q-Network (DQN) algorithm, in order to enable decentralized proactive self-adaptation in Smart Cyber-Physical Systems (sCPS). Concretely, these algorithms were tested in wildfire tracking adaptation scenarios, included in Unmanned Aerial Vehicles (UAV). For simulating UAV systems and different uncertain wildfire scenarios, Wildfire-UAVSim is used in this repository, which consists of a customizable wildfire tracking simulator that enables the evaluation of diverse adaptation strategies. For further description of the Wildfire-UAVSim simulator check [its repository](https://github.com/atenearesearchgroup/Wildfire-UAVSim).
 
 ## Project structure
 
