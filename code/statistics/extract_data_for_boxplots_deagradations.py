@@ -2,13 +2,11 @@
 import numpy
 import os
 import json
-
 data = []
 labels = []
 # Temporarily developed this way. Its getting all projects starting with "Wildfire-Simulator-DQN-PCD", from
 # inside of one of the copies
 for dirpath, dirnames, filenames in os.walk("../../../"):
-    print(dirpath)
     if (dirpath.startswith("../../../Wildfire-Simulator-DQN-PCD") and dirpath.endswith("results/PCD/inference_results")):
         labels.append(dirpath)
 

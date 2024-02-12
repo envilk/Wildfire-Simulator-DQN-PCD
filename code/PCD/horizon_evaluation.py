@@ -2,8 +2,6 @@ import itertools
 import os
 import sys
 import time
-import copy
-
 import mesa
 import numpy
 import matplotlib as mpl
@@ -14,13 +12,13 @@ sys.path.append('../')
 sys.path.append('../simulator/')
 sys.path.append('../mesa_addons/')
 
-import agents
+import agents, wildfire_model
 from Space_Grid_Setter_Getter import MultiGrid
 from common_fixed_variables import *
 from paths import *
 
 
-class HorizonEvaluation(mesa.Model):
+class HorizonEvaluation(wildfire_model.WildFireModel):
 
     # set the enviroment (grid, schedule, fire agents), new UAVs, eval parameters (step counter, ac reward,
     # eval times), data collector, 'new_directions' variable for UAVs
@@ -85,29 +83,6 @@ class HorizonEvaluation(mesa.Model):
             plt.plot(to_plot, c=cmap_rewards.to_rgba(agent_idx + 1))
         plt.pause(0.001)  # pause a bit so that plots are updated
 
-    def set_fire_agents(self):
-        x_c = int(HEIGHT / 2)
-        y_c = int(WIDTH / 2)
-        x = [x_c]  # , x_c + 1, x_c - 1
-        y = [y_c]  # , y_c + 1, y_c - 1
-        for i in range(HEIGHT):
-            for j in range(WIDTH):
-                # decides to put a "tree" (fire agent) or not
-                if SYSTEM_RANDOM.random() < DENSITY_PROB or (i in x and j in y): # if prob or in center
-                    if i in x and j in y:
-                        self.new_fire_agent(i, j, True)
-                    else:
-                        self.new_fire_agent(i, j, False)
-
-    def new_fire_agent(self, pos_x, pos_y, burning):
-        source_fire = agents.Fire(self.unique_agents_id, self, burning)
-        self.unique_agents_id += 1
-        self.schedule.add(source_fire)
-        self.grid.place_agent(source_fire, tuple([pos_x, pos_y]))
-
-    def normalize(self, to_normalize, upper, multiplier, subtractor):
-        return ((to_normalize / upper) * multiplier) - subtractor
-
     def count_security_distance_overpassing(self, idx, num_max_uavs):
         count = 0
 
@@ -134,7 +109,7 @@ class HorizonEvaluation(mesa.Model):
         for UAV_idx in range(0,
                              max_agents):  # "max_agents" must go to the max number of agents on training (self.NUM_AGENTS)
             num_max_uavs = UAV_idx + 1
-            num_runs = 1
+            num_runs = 10
             self.strings_to_write_eval = []
             self.overall_interactions = []
             for i in range(0, num_runs):
@@ -220,103 +195,100 @@ class HorizonEvaluation(mesa.Model):
         Z = 15
         for z in range(Z):
             self.reset_step_horizon_conf(UAV_idx, t, False)
-            best_coordinate_descent = []
-            for _ in self.agents[:num_max_uavs]:
-                best_coordinate_descent.append({"actions": [], "rewards": [], "rewards_for_evaluation": []})
+            best_coordinate_descent = [{"actions": [], "rewards": [], "rewards_for_evaluation": []} for _ in range(num_max_uavs)]
             for step in range(horizon):
                 # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
                 for idx, a in enumerate(self.agents[:num_max_uavs]):
-                    # for agent in range(num_max_uavs):
-                    possible_actions = [0, 1, 2, 3]
-                    oposite_idx = 2  # to move agent the opposite way
-                    tested_first_possible_action = False
-                    moved_once_in_loop = False
-                    # has to be reset each time, otherwise in the step 't + 1' is comparing with the last best reward,
-                    # which can lead into not finding any optimal action in the time step 't'
-                    # (which doesn't make any sense)
-                    best_reward = [float('-inf') for _ in self.agents[:num_max_uavs]]
-                    if step == 0:  # random start in coordinate descent iterations
-                        action = SYSTEM_RANDOM.choice(possible_actions)
-                        a.selected_dir = action
-                        moved = a.move()
-                        # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
+                    moved_once_in_loop = self.select_and_move_agent(a, best_coordinate_descent, idx, num_max_uavs, step)
 
-                        _, reward, rewards_for_evaluation = self.state()
-
-                        best_coordinate_descent[idx]["rewards_for_evaluation"].append(rewards_for_evaluation[idx])
-                        best_coordinate_descent[idx]["rewards"].append(reward[idx])
-                        best_coordinate_descent[idx]["actions"].append(action)
-
-                        # this if statement helps to indicate whether the UAV must be moved or not to the opposite
-                        # direction, depending on if before it could be moved. If not, it shouldn't be moved to any
-                        # other position (done when testing all actions as well, in the else statement below)
-                        if moved:
-                            moved_once_in_loop = True
-                            # move opposite direction (original state) to try new possible actions
-                            a.selected_dir = (action + oposite_idx) % len(possible_actions)
-                            a.move()
-                            # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
-                    else:  # try all actions, like normally with all 'Z' iterations
-                        for action in possible_actions:
-                            a.selected_dir = action
-                            moved = a.move()
-                            # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
-
-                            _, reward, rewards_for_evaluation = self.state()
-
-                            if reward[idx] > best_reward[idx]:
-                                best_reward[idx] = reward[idx]
-                                if not tested_first_possible_action:
-                                    tested_first_possible_action = True
-                                    best_coordinate_descent[idx]["rewards_for_evaluation"].append(rewards_for_evaluation[idx])
-                                    best_coordinate_descent[idx]["rewards"].append(reward[idx])
-                                    best_coordinate_descent[idx]["actions"].append(action)
-                                else:
-                                    best_coordinate_descent[idx]["rewards_for_evaluation"][step] = rewards_for_evaluation[idx]
-                                    best_coordinate_descent[idx]["rewards"][step] = reward[idx]
-                                    best_coordinate_descent[idx]["actions"][step] = action
-
-                            if moved:
-                                moved_once_in_loop = True
-                                # move opposite direction (original state) to try new possible actions
-                                a.selected_dir = (action + oposite_idx) % len(possible_actions)
-                                a.move()
-                                # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
-
-                    # reset for each tried action
-                    if t + step + 1 < BATCH_SIZE:
-                        # move if possible to the best chosen action from the possible ones, then do the same with
-                        # the rest of the agents. If UAV was moved towards any direction, then moved, if it wasn't
-                        # moved, there is not best action, so just don't move.
-                        if moved_once_in_loop:
-                            a.selected_dir = best_coordinate_descent[idx]["actions"][step]
-                            a.move()
-                        # if we are checking last UAV, then change grid for next step in horizon, otherwise,
-                        # maintain same grid
-                        if idx == num_max_uavs - 1:
-                            self.reset_step_horizon_conf(UAV_idx, t + step + 1, True)
-                        else:
-                            self.reset_step_horizon_conf(UAV_idx, t + step, True)
-                        # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
+                    self.finalize_move(UAV_idx, a, best_coordinate_descent, idx, moved_once_in_loop, num_max_uavs, step, t)
 
             # 2.5: remove UAVs from grids (placed again at the beginning of the combinations loop)
             for step in range(horizon + 1):
                 if t + step < BATCH_SIZE:
                     self.reset_step_horizon_conf(UAV_idx, t + step, False)
             # calculate accumulated reward for each trajectory
-            ac_rewards = []
-            for idx, _ in enumerate(self.agents[:num_max_uavs]):
-                ac_rewards.append(sum(best_coordinate_descent[idx]["rewards"]))
+            ac_rewards = [sum(best_coordinate_descent[idx]["rewards"]) for idx in range(num_max_uavs)]
             mean_reward = sum(ac_rewards) / len(ac_rewards)
-
             mean_reward = self.apply_noise(mean_reward)
 
-            # pick best trajectory based on the rest
+            # pick the best trajectory based on the rest
             if mean_reward > best_mean_reward:
                 best_mean_reward = mean_reward
                 best_trajectory = best_coordinate_descent
 
         return best_trajectory
+
+    def finalize_move(self, UAV_idx, a, best_coordinate_descent, idx, moved_once_in_loop, num_max_uavs, step, t):
+        # reset for each tried action
+        aux_horizon = t + step
+        if aux_horizon + 1 < BATCH_SIZE:
+            # move if possible to the best chosen action from the possible ones, then do the same with the rest of the agents. If UAV was moved towards any direction, then moved, if it wasn't moved, there is not best action, so just don't move.
+            if moved_once_in_loop:
+                a.selected_dir = best_coordinate_descent[idx]["actions"][step]
+                a.move()
+            # if we are checking last UAV, then change grid for next step in horizon, otherwise, maintain same grid
+            if idx == num_max_uavs - 1:
+                aux_horizon += 1
+            self.reset_step_horizon_conf(UAV_idx, aux_horizon, True)
+
+            # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
+
+    def select_and_move_agent(self, a, best_coordinate_descent, idx, num_max_uavs, step):
+        oposite_idx = 2  # to move agent the opposite way
+        tested_first_possible_action = False
+        moved_once_in_loop = False
+        # has to be reset each time, otherwise in the step 't + 1' is comparing with the last best reward, which can lead into not finding any optimal action in the time step 't' (which doesn't make any sense)
+        best_reward = [float('-inf') for _ in self.agents[:num_max_uavs]]
+        possible_actions = [a for a in range(N_ACTIONS)]
+        if step == 0: possible_actions = [SYSTEM_RANDOM.choice(possible_actions)]
+        for action in possible_actions:
+            a.selected_dir = action
+            moved = a.move()
+            # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
+
+            _, reward, rewards_for_evaluation = self.state()
+
+            if step == 0:  # random start in coordinate descent iterations
+                self.append_agent_step(action, best_coordinate_descent, idx, reward,
+                                       rewards_for_evaluation)
+            else:  # try all actions, like normally with all 'Z' iterations
+                tested_first_possible_action = self.update_best_reward(action, best_coordinate_descent, best_reward,
+                                                                       idx, reward,
+                                                                       rewards_for_evaluation, step,
+                                                                       tested_first_possible_action)
+            # this if statement helps to indicate whether the UAV must be moved or not to the opposite direction, depending on if before it could be moved. If not, it shouldn't be moved to any other position (done when testing all actions as well, in the else statement below)
+            moved_once_in_loop = self.check_if_agent_moved(a, action, moved, moved_once_in_loop,
+                                                           oposite_idx, possible_actions)
+        return moved_once_in_loop
+
+    def check_if_agent_moved(self, a, action, moved, moved_once_in_loop, oposite_idx, possible_actions):
+        if moved:
+            moved_once_in_loop = True
+            # move opposite direction (original state) to try new possible actions
+            a.selected_dir = (action + oposite_idx) % len(possible_actions)
+            a.move()
+            # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
+        return moved_once_in_loop
+
+    def update_best_reward(self, action, best_coordinate_descent, best_reward, idx, reward, rewards_for_evaluation,
+                           step, tested_first_possible_action):
+        if reward[idx] > best_reward[idx]:
+            best_reward[idx] = reward[idx]
+            if not tested_first_possible_action:
+                tested_first_possible_action = True
+                self.append_agent_step(action, best_coordinate_descent, idx, reward,
+                                       rewards_for_evaluation)
+            else:
+                best_coordinate_descent[idx]["rewards_for_evaluation"][step] = rewards_for_evaluation[idx]
+                best_coordinate_descent[idx]["rewards"][step] = reward[idx]
+                best_coordinate_descent[idx]["actions"][step] = action
+        return tested_first_possible_action
+
+    def append_agent_step(self, action, best_coordinate_descent, idx, reward, rewards_for_evaluation):
+        best_coordinate_descent[idx]["rewards_for_evaluation"].append(rewards_for_evaluation[idx])
+        best_coordinate_descent[idx]["rewards"].append(reward[idx])
+        best_coordinate_descent[idx]["actions"].append(action)
 
     def apply_noise(self, reward):
         if NOISE:
@@ -434,48 +406,6 @@ class HorizonEvaluation(mesa.Model):
             # if done:
             if BATCH_SIZE == t:
                 break
-
-    def state(self):
-        states = []
-        rewards = []
-        states_positions = []
-        UAV_positions = []
-        rewards_for_evaluation = []
-        for agent in self.schedule.agents:
-            if type(agent) is agents.UAV:
-                surrounding_states, reward, positions = agent.surrounding_states()
-                states.append(surrounding_states)
-                aux_reward = self.normalize(float(reward), N_OBSERVATIONS, 1, 0)
-                rewards.append(aux_reward)
-                rewards_for_evaluation.append(copy.deepcopy(aux_reward))
-                states_positions.append(positions)
-                UAV_positions.append(agent.pos)
-
-        # if there are three agents: intersection [(1-2), (1-3)], [(2-1), (2-3)], [(3-1), (3-2)]
-        # Basically the sentence shown before means that an UAV receives a -1 reward when it
-        # overlaps one cell in its observation area with another UAV
-        # FINNISH COMMENT
-        for i in range(0, len(states_positions)):
-            reward_discount_counter = 0
-            aux_states_positions = states_positions.copy()
-            aux_final_states = []
-            del aux_states_positions[i]
-
-            for st in aux_states_positions:
-                aux_final_states.extend(set(states_positions[i]) & set(st))
-
-            reward_discount_counter += (len(set(aux_final_states)) / N_OBSERVATIONS)
-            rewards[i] -= reward_discount_counter
-
-        # when UAV reaches edge or corner, takes less surrounding states, so fulfilling the vector till
-        # maximum amount of observation is necessary. It is IMPORTANT to mention that this COULD AFFECT to
-        # the correct behaviour of drones when these are trying to maintain distance with other, because of
-        # less area is taking into account. Either way, in most cases this is expendable.
-        for st, _ in enumerate(states):
-            counter = len(states[st])
-            for i in range(counter, N_OBSERVATIONS):
-                states[st].append(0)
-        return states, rewards, rewards_for_evaluation
 
     def step(self):
         self.datacollector.collect(self)

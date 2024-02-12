@@ -4,7 +4,7 @@ import mesa
 import sys
 
 sys.path.append('../mesa_addons/')
-sys.path.append('../DQN/')
+sys.path.append('../NN/')
 sys.path.append('../PCD/')
 
 from Canvas_Grid_Visualization import CanvasGrid
