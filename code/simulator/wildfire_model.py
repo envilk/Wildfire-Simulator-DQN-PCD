@@ -195,7 +195,6 @@ class WildFireModel(mesa.Model):
             counter = len(states[st])
             for i in range(counter, N_OBSERVATIONS):
                 states[st].append(0)
-        print(len(states), len(states[0]))
         return states, rewards, rewards_for_evaluation
 
     def select_action_inference(self, state):

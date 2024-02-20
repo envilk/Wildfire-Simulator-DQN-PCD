@@ -23,7 +23,7 @@ from common_fixed_variables import *
 from paths import *
 
 
-class NeuralNetworkLearning():
+class DQNLearning:
 
     def __init__(self, wildfiremodel=None):
 
@@ -74,8 +74,11 @@ class NeuralNetworkLearning():
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
         non_final_next_states = torch.stack([s for s in batch.next_state if s is not None])
+        # x -> (BATCH_SIZE, NUM_AGENTS, NUM_OBSERVATIONS) | torch.Size([90, 3, 289])
         state_batch = torch.stack(list(batch.state), dim=0)
+        # x -> (BATCH_SIZE, NUM_AGENTS) | torch.Size([90, 3])
         action_batch = torch.stack(list(batch.action), dim=0)
+        # x -> (BATCH_SIZE, 1, NUM_AGENTS) | torch.Size([90, 1, 3])
         reward_batch = torch.stack(list(batch.reward), dim=0)
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
@@ -232,3 +235,9 @@ class NeuralNetworkLearning():
         with open(ROOT_RESULTS_DQN_INFERENCE_RESULTS + 'COUNTER_' + str(UAV_idx + 1) + 'UAV.txt',
                   'w') as f2:
             f2.writelines(self.overall_interactions)
+
+
+class LSTMLearning:
+    
+    def __init__(self):
+        pass

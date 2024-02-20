@@ -7,6 +7,7 @@ import numpy
 import matplotlib as mpl
 import seaborn as sns
 import matplotlib.pyplot as plt
+import functools
 
 sys.path.append('../')
 sys.path.append('../simulator/')
@@ -94,7 +95,8 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             y1 = self.agents_positions[idx][1]
             x2 = a_pos[0]
             y2 = a_pos[1]
-            distance = euclidean_distance(x1, y1, x2, y2) # 0 agent just to take euclidean function, no reason for any UAV
+            distance = euclidean_distance(x1, y1, x2,
+                                          y2)  # 0 agent just to take euclidean function, no reason for any UAV
             if distance < SECURITY_DISTANCE:
                 count += 1
 
@@ -174,7 +176,6 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         end = time.time() - start
         self.times.append(end)
         reward_to_append = []
-        print(best_trajectory)
 
         for idx, _ in enumerate(self.agents[:num_max_uavs]):
             interactions_counter += self.count_security_distance_overpassing(idx, num_max_uavs)
@@ -186,6 +187,24 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         for idx, a in enumerate(self.agents[:num_max_uavs]):
             self.agents_new_pos(idx, best_trajectory[idx]["actions"][0])
 
+        # 5: build dataset
+        print('- - - - - - - - - - - - - ')
+        # print(best_trajectory)
+        list_1 = [dict["states"][0] for dict in best_trajectory]
+        list_2 = []
+
+        for pos in self.agents_positions[:num_max_uavs]:
+            str_aux = ''
+            str_aux += str(pos[0])
+            str_aux += str(pos[1])
+            list_2.append(int(str_aux))
+
+        list_mixed = []
+        for state, pos in zip(list_1, list_2):
+            list_mixed.append(state + [pos])
+
+        print(list_mixed)
+
         return interactions_counter
 
     def best_trajectory_within_horizon(self, num_max_uavs, UAV_idx, i, t):
@@ -195,21 +214,24 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         Z = 15
         for z in range(Z):
             self.reset_step_horizon_conf(UAV_idx, t, False)
-            best_coordinate_descent = [{"actions": [], "rewards": [], "rewards_for_evaluation": []} for _ in range(num_max_uavs)]
+            best_coordinate_descent = [{"actions": [], "rewards": [], "rewards_for_evaluation": [], "states": []}
+                                       for _ in range(num_max_uavs)]
             for step in range(horizon):
                 # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
                 for idx, a in enumerate(self.agents[:num_max_uavs]):
                     moved_once_in_loop = self.select_and_move_agent(a, best_coordinate_descent, idx, num_max_uavs, step)
 
-                    self.finalize_move(UAV_idx, a, best_coordinate_descent, idx, moved_once_in_loop, num_max_uavs, step, t)
+                    self.finalize_move(UAV_idx, a, best_coordinate_descent, idx, moved_once_in_loop, num_max_uavs, step,
+                                       t)
 
             # 2.5: remove UAVs from grids (placed again at the beginning of the combinations loop)
             for step in range(horizon + 1):
                 if t + step < BATCH_SIZE:
                     self.reset_step_horizon_conf(UAV_idx, t + step, False)
-            # calculate accumulated reward for each trajectory
+            # calculate accumulated reward for each trajectory, to compare them
             ac_rewards = [sum(best_coordinate_descent[idx]["rewards"]) for idx in range(num_max_uavs)]
             mean_reward = sum(ac_rewards) / len(ac_rewards)
+            # apply noise based on a parametrized normal distribution
             mean_reward = self.apply_noise(mean_reward)
 
             # pick the best trajectory based on the rest
@@ -247,13 +269,14 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             moved = a.move()
             # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
 
-            _, reward, rewards_for_evaluation = self.state()
+            states, reward, rewards_for_evaluation = self.state()
 
             if step == 0:  # random start in coordinate descent iterations
-                self.append_agent_step(action, best_coordinate_descent, idx, reward,
+                self.append_agent_step(states, action, best_coordinate_descent, idx, reward,
                                        rewards_for_evaluation)
             else:  # try all actions, like normally with all 'Z' iterations
-                tested_first_possible_action = self.update_best_reward(action, best_coordinate_descent, best_reward,
+                tested_first_possible_action = self.update_best_reward(states, action, best_coordinate_descent,
+                                                                       best_reward,
                                                                        idx, reward,
                                                                        rewards_for_evaluation, step,
                                                                        tested_first_possible_action)
@@ -271,24 +294,27 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
         return moved_once_in_loop
 
-    def update_best_reward(self, action, best_coordinate_descent, best_reward, idx, reward, rewards_for_evaluation,
+    def update_best_reward(self, states, action, best_coordinate_descent, best_reward, idx, reward,
+                           rewards_for_evaluation,
                            step, tested_first_possible_action):
         if reward[idx] > best_reward[idx]:
             best_reward[idx] = reward[idx]
             if not tested_first_possible_action:
                 tested_first_possible_action = True
-                self.append_agent_step(action, best_coordinate_descent, idx, reward,
+                self.append_agent_step(states, action, best_coordinate_descent, idx, reward,
                                        rewards_for_evaluation)
             else:
                 best_coordinate_descent[idx]["rewards_for_evaluation"][step] = rewards_for_evaluation[idx]
                 best_coordinate_descent[idx]["rewards"][step] = reward[idx]
                 best_coordinate_descent[idx]["actions"][step] = action
+                best_coordinate_descent[idx]["states"][step] = states[idx]
         return tested_first_possible_action
 
-    def append_agent_step(self, action, best_coordinate_descent, idx, reward, rewards_for_evaluation):
+    def append_agent_step(self, states, action, best_coordinate_descent, idx, reward, rewards_for_evaluation):
         best_coordinate_descent[idx]["rewards_for_evaluation"].append(rewards_for_evaluation[idx])
         best_coordinate_descent[idx]["rewards"].append(reward[idx])
         best_coordinate_descent[idx]["actions"].append(action)
+        best_coordinate_descent[idx]["states"].append(states[idx])
 
     def apply_noise(self, reward):
         if NOISE:

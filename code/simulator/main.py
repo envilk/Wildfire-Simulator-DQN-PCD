@@ -59,7 +59,7 @@ def main():
     print('observations:', N_OBSERVATIONS)
 
     wf_model = wildfire_model.WildFireModel()
-    deep_q_learning = nn_learning_process.NeuralNetworkLearning(wildfiremodel=wf_model)
+    deep_q_learning = nn_learning_process.DQNLearning(wildfiremodel=wf_model)
 
     if not INFERENCE:  # False = training
         deep_q_learning.train()
