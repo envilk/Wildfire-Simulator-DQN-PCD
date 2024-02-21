@@ -1,7 +1,9 @@
 # python libraries
-
+import h5py
 import mesa
 import sys
+
+import torch
 
 sys.path.append('../mesa_addons/')
 sys.path.append('../NN/')
@@ -57,6 +59,14 @@ def agent_portrayal(agent):
 def main():
     print('actions:', N_ACTIONS)
     print('observations:', N_OBSERVATIONS)
+
+    # Open the HDF5 file
+    with h5py.File('dataset.hdf5', 'r') as f:
+        # Access the dataset
+        data = f['data'][:]
+        # Convert to PyTorch tensor
+        data_tensor = torch.tensor(data)
+        print(data_tensor, data_tensor.shape)
 
     wf_model = wildfire_model.WildFireModel()
     deep_q_learning = nn_learning_process.DQNLearning(wildfiremodel=wf_model)

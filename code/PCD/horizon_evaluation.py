@@ -7,7 +7,7 @@ import numpy
 import matplotlib as mpl
 import seaborn as sns
 import matplotlib.pyplot as plt
-import functools
+import h5py
 
 sys.path.append('../')
 sys.path.append('../simulator/')
@@ -111,31 +111,54 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         for UAV_idx in range(0,
                              max_agents):  # "max_agents" must go to the max number of agents on training (self.NUM_AGENTS)
             num_max_uavs = UAV_idx + 1
-            num_runs = 10
+            num_runs = 3
             self.strings_to_write_eval = []
             self.overall_interactions = []
+            batches = []
+
             for i in range(0, num_runs):
                 interactions_counter = 0
                 print('-------- NUM_RUN: ', i, '--------')
                 self.EPISODE_REWARD = []
                 self.reset()
                 self.obtain_grids(num_run=i)
+
+                simulation = []
                 for t in itertools.count():
                     print('-------- STEP: ', t, '--------')
                     # if done:
                     if t == BATCH_SIZE - 1:
                         break
 
-                    interactions_counter = self.evaluation_step(UAV_idx, i, interactions_counter, num_max_uavs, t)
+                    interactions_counter, states_and_position_mixed = self.evaluation_step(UAV_idx, i,
+                                                                                           interactions_counter,
+                                                                                           num_max_uavs, t)
+                    states_and_position_mixed_numpy = numpy.array(states_and_position_mixed)
+                    simulation.append(states_and_position_mixed_numpy)
+                    print(states_and_position_mixed_numpy.shape)
+
+                simulation_numpy = numpy.stack(simulation, axis=0)
+                batches.append(simulation_numpy)
+                print(simulation_numpy.shape)
 
                 times.append(self.times)
 
                 self.calculate_metrics(i, interactions_counter, num_max_uavs)
 
+            batches_numpy = numpy.stack(batches, axis=0)
+            print(batches_numpy.shape)
+
+            self.write_h5py_file_LSTM_dataset(batches_numpy)
             self.write_metrics_files(num_max_uavs)
 
         print("--- TIMES ---")
         [print(times[idx]) for idx in range(0, max_agents)]
+
+    def write_h5py_file_LSTM_dataset(self, data):
+        # Create a new HDF5 file
+        with h5py.File('dataset.hdf5', 'w') as f:
+            # Create a dataset within the file to store your data
+            dset = f.create_dataset('data', data=data)
 
     def write_metrics_files(self, num_max_uavs):
         # CHANGE STR(0) IF PARALLELIZATION IS NEEDED. PUT AS MANY NUMBERS AS CPUS ARE USED
@@ -188,24 +211,28 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             self.agents_new_pos(idx, best_trajectory[idx]["actions"][0])
 
         # 5: build dataset
-        print('- - - - - - - - - - - - - ')
-        # print(best_trajectory)
+        states_and_position_mixed = self.build_LSTM_dataset_instance(best_trajectory, num_max_uavs)
+
+        return interactions_counter, states_and_position_mixed
+
+    def build_LSTM_dataset_instance(self, best_trajectory, num_max_uavs):
         list_1 = [dict["states"][0] for dict in best_trajectory]
         list_2 = []
 
         for pos in self.agents_positions[:num_max_uavs]:
-            str_aux = ''
-            str_aux += str(pos[0])
-            str_aux += str(pos[1])
-            list_2.append(int(str_aux))
+            print(pos[0], pos[1])
+            pos_aux_1 = str(pos[0])
+            pos_aux_2 = str(pos[1])
 
-        list_mixed = []
+            list_2.append([int(pos_aux_1), int(pos_aux_2)])
+
+        states_and_position_mixed = []
         for state, pos in zip(list_1, list_2):
-            list_mixed.append(state + [pos])
+            states_and_position_mixed.append(state + pos)
+        print(states_and_position_mixed)
 
-        print(list_mixed)
+        return states_and_position_mixed
 
-        return interactions_counter
 
     def best_trajectory_within_horizon(self, num_max_uavs, UAV_idx, i, t):
         best_mean_reward = float('-inf')
