@@ -111,7 +111,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         for UAV_idx in range(0,
                              max_agents):  # "max_agents" must go to the max number of agents on training (self.NUM_AGENTS)
             num_max_uavs = UAV_idx + 1
-            num_runs = 3
+            num_runs = 1
             self.strings_to_write_eval = []
             self.overall_interactions = []
             batches = []
@@ -127,15 +127,23 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                 for t in itertools.count():
                     print('-------- STEP: ', t, '--------')
                     # if done:
-                    if t == BATCH_SIZE - 1:
+                    if t == BATCH_SIZE:
                         break
 
+                    """
                     interactions_counter, states_and_position_mixed = self.evaluation_step(UAV_idx, i,
                                                                                            interactions_counter,
                                                                                            num_max_uavs, t)
                     states_and_position_mixed_numpy = numpy.array(states_and_position_mixed)
                     simulation.append(states_and_position_mixed_numpy)
                     print(states_and_position_mixed_numpy.shape)
+                    """
+                    interactions_counter, rewards_and_actions_mixed = self.evaluation_step(UAV_idx, i,
+                                                                                           interactions_counter,
+                                                                                           num_max_uavs, t)
+                    rewards_and_actions_mixed_numpy = numpy.array(rewards_and_actions_mixed)
+                    simulation.append(rewards_and_actions_mixed_numpy)
+                    print(rewards_and_actions_mixed_numpy.shape)
 
                 simulation_numpy = numpy.stack(simulation, axis=0)
                 batches.append(simulation_numpy)
@@ -148,15 +156,21 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             batches_numpy = numpy.stack(batches, axis=0)
             print(batches_numpy.shape)
 
-            self.write_h5py_file_LSTM_dataset(batches_numpy)
+            self.write_h5py_file_LSTM_dataset(batches_numpy, num_max_uavs)
             self.write_metrics_files(num_max_uavs)
 
         print("--- TIMES ---")
         [print(times[idx]) for idx in range(0, max_agents)]
 
-    def write_h5py_file_LSTM_dataset(self, data):
+    def write_h5py_file_LSTM_dataset(self, data, num_max_uavs):
+        print()
+        print()
+        print('PRINTING DATASET')
+        print()
+        print()
+        print(data.shape, data)
         # Create a new HDF5 file
-        with h5py.File('dataset.hdf5', 'w') as f:
+        with h5py.File('dataset_' + str(num_max_uavs) + 'UAV.hdf5', 'w') as f:
             # Create a dataset within the file to store your data
             dset = f.create_dataset('data', data=data)
 
@@ -211,11 +225,17 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             self.agents_new_pos(idx, best_trajectory[idx]["actions"][0])
 
         # 5: build dataset
+        """
         states_and_position_mixed = self.build_LSTM_dataset_instance(best_trajectory, num_max_uavs)
 
         return interactions_counter, states_and_position_mixed
+        """
+        rewards_and_actions_mixed = self.build_LSTM_dataset_instance(best_trajectory, num_max_uavs)
+
+        return interactions_counter, rewards_and_actions_mixed
 
     def build_LSTM_dataset_instance(self, best_trajectory, num_max_uavs):
+        """
         list_1 = [dict["states"][0] for dict in best_trajectory]
         list_2 = []
 
@@ -232,12 +252,22 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         print(states_and_position_mixed)
 
         return states_and_position_mixed
+        """
+        list_1 = [dict["rewards"][0] for dict in best_trajectory]
+        list_2 = [dict["actions"][0] for dict in best_trajectory]
+
+        rewards_and_actions_mixed = []
+        for reward, action in zip(list_1, list_2):
+            rewards_and_actions_mixed.append([reward, action])
+        print(rewards_and_actions_mixed)
+
+        return rewards_and_actions_mixed
 
 
     def best_trajectory_within_horizon(self, num_max_uavs, UAV_idx, i, t):
         best_mean_reward = float('-inf')
         best_trajectory = None
-        horizon = 3
+        horizon = 1
         Z = 15
         for z in range(Z):
             self.reset_step_horizon_conf(UAV_idx, t, False)
