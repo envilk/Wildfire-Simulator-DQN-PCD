@@ -19,7 +19,7 @@ import agents
 import nn_learning_process
 import horizon_evaluation
 
-from common_fixed_variables import (INFERENCE, RNN, INTERFACE, WIDTH, HEIGHT, FIRE_COLORS, VEGETATION_COLORS,
+from common_fixed_variables import (INFERENCE, RNN, NUM_AGENTS, INTERFACE, WIDTH, HEIGHT, FIRE_COLORS, VEGETATION_COLORS,
                                     SMOKE_COLORS, N_ACTIONS, N_OBSERVATIONS, FUEL_UPPER_LIMIT, PROBABILITY_MAP,
                                     BLACK_AND_WHITE_COLORS, BURNING_FLAGS_MAP, HORIZON_EVAL, normalize_fuel_values)
 
@@ -59,31 +59,6 @@ def agent_portrayal(agent):
 def main():
     print('actions:', N_ACTIONS)
     print('observations:', N_OBSERVATIONS)
-
-    open_dataset_LSTM = True
-    if open_dataset_LSTM:
-        # Open the HDF5 file
-        with h5py.File('dataset_3UAV.hdf5', 'r') as f:
-            # Access the dataset
-            data = f['data'][:]
-            # Convert to PyTorch tensor
-            data_tensor = torch.tensor(data)
-
-            size = data_tensor.size()
-            seq_length = 10
-            # inferred dimension based on 'seq_length', only if size[1] (num of simulations) is divisible
-            # by 'seq_length', otherwise it must be changed
-            reshaped = data_tensor.view(-1, seq_length, size[2], size[3])
-
-            r_size = reshaped.size()
-            reshaped_v2 = reshaped.view(r_size[0], r_size[1], -1)
-
-    print('¡¡¡printing data!!!')
-    print(data_tensor, data_tensor.shape)
-    print('¡¡¡reshape!!!')
-    print(reshaped, reshaped.shape)
-    print('¡¡¡reshape v2!!!')
-    print(reshaped_v2, reshaped_v2.shape)
 
     wf_model = wildfire_model.WildFireModel()
     deep_q_learning = nn_learning_process.DQNLearning(wildfiremodel=wf_model)

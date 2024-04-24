@@ -8,6 +8,9 @@ import mesa
 import statistics
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import numpy as np
+import torch.nn as nn
+from torchvision.transforms import transforms
 
 # own python modules
 
@@ -36,6 +39,7 @@ class WildFireModel(mesa.Model):
         self.unique_agents_id = None
         self.eval_step_counter = 0
         self.eval_ac_reward = 0
+        self.horizon = 0
         self.EPISODE_REWARD_MEANS = []
 
         # in widlfiremodel, but used by DQN
@@ -85,6 +89,12 @@ class WildFireModel(mesa.Model):
         self.datacollector = mesa.DataCollector()
         self.new_direction = [0 for a in range(0, self.NUM_AGENTS)]
         self.times = []
+
+        # for RNN
+        if RNN:
+            self.actions_window = []
+            self.actions_window_transformed = []
+            self.configure_RNN_model()
 
     def plot_durations(self, show_result=False):
         plt.figure(1)
@@ -247,7 +257,8 @@ class WildFireModel(mesa.Model):
                 y1 = agent.pos[1]
                 x2 = a.pos[0]
                 y2 = a.pos[1]
-                distance = euclidean_distance(x1, y1, x2, y2) # 0 agent just to take euclidean function, no reason for any UAV
+                distance = euclidean_distance(x1, y1, x2,
+                                              y2)  # 0 agent just to take euclidean function, no reason for any UAV
                 if distance < SECURITY_DISTANCE:
                     count += 1
 
@@ -276,14 +287,27 @@ class WildFireModel(mesa.Model):
     def step(self, UAV_idx=-1, label=-1, type='', num_run=0, auto=False, strings_to_write_eval='',
              overall_interactions=''):
         self.datacollector.collect(self)
+        print(self.eval_step_counter)
         if UAV_idx == 1:
             pass
         if sum(isinstance(i, agents.UAV) for i in self.schedule.agents) > 0:
             if INFERENCE:
                 state, _, _ = self.state()  # s_t
                 if RNN:
-                    self.new_direction = [SYSTEM_RANDOM.choice(range(0, N_ACTIONS))
-                                          for i in range(0, self.NUM_AGENTS)]  # a_t
+                    self.horizon = 30
+                    if self.eval_step_counter == 0:
+                        self.new_direction = [SYSTEM_RANDOM.choice(range(0, N_ACTIONS))
+                                              for i in range(0, self.NUM_AGENTS)]
+                        self.actions_window.append(self.new_direction)
+                        self.actions_window = torch.tensor(self.actions_window).type(torch.float).to('cpu')
+                        self.actions_window = torch.unsqueeze(self.actions_window, 1)
+                        self.actions_window = self.transform(self.actions_window)
+                    else:
+                        self.new_direction = self.select_action_inference_RNN()[-1][0]
+                    self.actions_window_transformed.append(self.new_direction)
+
+                    print('WINDOW: ', self.actions_window_transformed)
+                    print()
                 else:
                     start = time.time()
                     self.new_direction = self.select_action_inference(state)  # a_t
@@ -304,3 +328,99 @@ class WildFireModel(mesa.Model):
                 self.eval_step_counter += 1
             self.set_drone_dirs()
         self.schedule.step()  # self.new_direction is used to execute previous obtained a_t
+
+    def predict(self, inputs):
+        with torch.no_grad():
+            print('PREDICT')
+            # DONE THIS WAY BECAUSE OF CLASSIFICATION PROBLEM INTERPRETED AS CONTINOUS PROBLEM
+            #inputs = torch.tensor(inputs).type(torch.float).to('cpu')
+            #if self.eval_step_counter == 1:
+            #    inputs = self.transform(inputs)
+            pred = self.model(inputs)
+        return inputs, pred
+
+    def transform_vector(self, vector):
+        # Scale the numbers to the range [0, 3]
+        scaled_vector = vector * 3
+        # Convert the numbers to integers
+        int_vector = np.round(scaled_vector).astype(int)
+        return int_vector
+
+    def select_action_inference_RNN(self):
+        if self.eval_step_counter <= self.horizon:
+            inputs, prediction = self.predict(self.actions_window)
+        else:
+            inputs, prediction = self.predict(self.actions_window[-self.horizon:])
+
+        self.actions_window = self.actions_window.tolist()
+        self.actions_window.append(prediction.tolist()[-1])
+        self.actions_window = torch.tensor(self.actions_window).to('cpu')
+
+        # Convert tensor to numpy array
+        prediction_numpy = prediction.cpu().numpy()
+        prediction_numpy = self.transform_vector(prediction_numpy)
+
+        print('inputs')
+        print(self.actions_window)
+        print(inputs)
+        print('predictions')
+        print(prediction)
+        print(prediction_numpy)
+
+        return prediction_numpy.tolist()
+
+    def configure_RNN_model(self):
+        epochs = 500
+        self.transform = transforms.Compose([
+            MinMaxNormalize()
+        ])
+        checkpoint = torch.load(
+            #'i2_o2_h64_bs128_nl2_d0_25_lr0_005/model_checkpoint_' + str(epochs) + '.pth')
+            'i1_o1_h64_bs64_nl2_d0_lr0_001/model_checkpoint_' + str(epochs) + '.pth')
+            #'model_good/model_checkpoint_' + str(epochs) + '.pth')
+        self.model = LSTM(input_dim=NUM_AGENTS, hidden_dim=64, output_dim=NUM_AGENTS,
+                          num_layers=2, dropout_prob=0).to('cpu')
+        print('LSTM model: ')
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.model.eval()
+        print(self.model)
+
+class MinMaxNormalize(object):
+    def __call__(self, tensor):
+        # Ensure the tensor is a float
+        tensor = tensor.float()
+
+        # Calculate min and max of the tensor
+        min_val = 0
+        max_val = 3
+
+        # Check if min or max is None
+        if min_val is None or max_val is None:
+            raise ValueError("The tensor contains non-numeric values.")
+
+        # Check if max and min are the same (this would lead to division by zero)
+        if max_val == min_val:
+            # Return the tensor as is (it's a constant tensor)
+            return tensor
+
+        # Normalize the tensor
+        normalized_tensor = (tensor - min_val) / (max_val - min_val)
+
+        return normalized_tensor
+
+
+class LSTM(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers, dropout_prob):
+        super(LSTM, self).__init__()
+        self.lstm_layer = nn.LSTM(input_dim, hidden_dim, num_layers, dropout=dropout_prob, batch_first=True)
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
+        #self.softmax = nn.Softmax() # classification
+
+    def forward(self, X):
+        out, (hidden, cell) = self.lstm_layer(X)  # out: tensor of shape (batch_size, seq_length, hidden_size)
+        # Can reshape the outputs such that it can be fit into the fully connected layer
+        # out = self.output_layer(out[:, -1, :])
+        out = self.output_layer(out)
+        #out = self.softmax(out) # classification
+        #print(out.shape, out) # classification
+        return out

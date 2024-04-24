@@ -14,7 +14,7 @@ print('2. DQN automatic evaluation ')
 print('3. PCD automatic evaluation ')
 print('4. Random selection automatic evaluation (future RNN/LSTM/etc) ')
 print('5. DQN interface evaluation ')
-print('6. Random selection interface evaluation (future RNN/LSTM/etc)')
+print('6. RNN (simple) interface evaluation')
 
 keep_looping = True
 option = -1
@@ -69,11 +69,11 @@ HEIGHT = 60
 
 DENSITY_PROB = 1  # Tree density (Float number in the interval [0, 1])
 BURNING_RATE = 1
-MU = 0.9  # Wind velocity (Float number in the interval [0, 1])
+MU = 0.95  # Wind velocity (Float number in the interval [0, 1])
 FIRE_SPREAD_SPEED = 2
 FUEL_UPPER_LIMIT = 10
 
-NUM_AGENTS = 3
+NUM_AGENTS = 1
 FUEL_BOTTOM_LIMIT = 7
 UAV_OBSERVATION_RADIUS = 8
 side = ((UAV_OBSERVATION_RADIUS * 2) + 1)  # allows to build a square side
@@ -91,7 +91,7 @@ COLORS_LEN = len(VEGETATION_COLORS)
 
 ACTIVATE_SMOKE = False
 ACTIVATE_WIND = False
-FIXED_WIND = False
+FIXED_WIND = True
 # To avoid throwing "KeyError: 'Layer'" when prob or flag burning maps are shown,
 # so UAV won't get its "Layer" attribute in the "portrayal_method(obj)", NUM_AGENTS must
 # be set to 0.

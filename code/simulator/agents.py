@@ -151,12 +151,12 @@ class Smoke():
 class Wind():
 
     def __init__(self):
-        self.wind_direction = 'south'
+        self.wind_direction = 'east'
         if not FIXED_WIND:
             # Possible mixed wind directions: NW, NE, SW, SE"
             self.first_dir = 'south'  # Introduce first wind direction (north, south, east, west):
-            self.first_dir_prob = 0.8  # "Introduce first wind probability [0, 1]
-            self.second_dir = 'east'  # Introduce second wind direction (probability calculated based on first one),
+            self.first_dir_prob = 0.5  # "Introduce first wind probability [0, 1]
+            self.second_dir = 'west'  # Introduce second wind direction (probability calculated based on first one),
             # (North, South, East, West)
 
     def change_direction(self):

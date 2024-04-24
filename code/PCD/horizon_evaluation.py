@@ -111,7 +111,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         for UAV_idx in range(0,
                              max_agents):  # "max_agents" must go to the max number of agents on training (self.NUM_AGENTS)
             num_max_uavs = UAV_idx + 1
-            num_runs = 1
+            num_runs = 10
             self.strings_to_write_eval = []
             self.overall_interactions = []
             batches = []
