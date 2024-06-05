@@ -4,6 +4,7 @@ import sys
 import time
 import mesa
 import numpy
+import random
 import datetime
 import pandas as pd
 import matplotlib as mpl
@@ -20,6 +21,55 @@ import agents, wildfire_model
 from Space_Grid_Setter_Getter import MultiGrid
 from common_fixed_variables import *
 from paths import *
+
+# Define the mapping of actions to radians
+action_to_radians = {
+    0: 0,  # Right
+    1: numpy.pi / 2,  # Down
+    2: numpy.pi,  # Left
+    3: 3 * numpy.pi / 2  # Up
+}
+
+# Helper function to round to the nearest valid value in [-1, 0, 1]
+def round_to_valid_value(value):
+    return round(min(1, max(-1, value)))
+
+# Create the reverse mapping
+cos_sin_to_action = {
+    (round_to_valid_value(numpy.cos(v)), round_to_valid_value(numpy.sin(v))): k
+    for k, v in action_to_radians.items()
+}
+
+# Function to convert action to cosine and sine values
+def action_to_cos_sin(action):
+    return float(round(numpy.cos(action_to_radians[action]))), float(round(numpy.sin(action_to_radians[action])))
+
+
+# Function to convert rounded cosine and sine values to action
+def cos_sin_to_action_fn(cos_value, sin_value):
+    rounded_cos = round_to_valid_value(cos_value)
+    rounded_sin = round_to_valid_value(sin_value)
+
+    # this if statement allows all possibilities within the range [-1, 0, 1] to be considered.
+    if (rounded_cos == -1 and rounded_sin == -1) or (rounded_cos == 1 and rounded_sin == 1):
+        rounded_sin = 0
+    elif rounded_cos == -1 and rounded_sin == 1:
+        if random.random() < 0.5:
+            rounded_sin = 0
+        else:
+            rounded_cos = 0
+            rounded_sin = -1
+    elif rounded_cos == 0 and rounded_sin == 0:
+        rounded_sin = -1 if random.random() < 0.5 else 1
+    elif rounded_cos == 1 and rounded_sin == -1:
+        if random.random() < 0.5:
+            rounded_cos = 0
+            rounded_sin = 1
+        else:
+            rounded_sin = 0
+
+    key = (rounded_cos, rounded_sin)
+    return cos_sin_to_action[key]
 
 
 class HorizonEvaluation(wildfire_model.WildFireModel):
@@ -116,6 +166,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         for UAV_idx in range(0,
                              max_agents):  # "max_agents" must go to the max number of agents on training (self.NUM_AGENTS)
+            #UAV_idx = 2
             num_max_uavs = UAV_idx + 1
             num_runs = 1
             self.strings_to_write_eval = []
@@ -189,11 +240,11 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         self.window = numpy.array(self.window)
 
         if num_max_uavs == 1:
-            colums = ['A', 'B']  # 1 agent
+            colums = ['A', 'B', 'C']  # 1 agent
         elif num_max_uavs == 2:
-            colums = ['A', 'B', 'C', 'D']  # 2 agents
+            colums = ['A', 'B', 'C', 'D', 'E', 'F'] # 2 agents
         elif num_max_uavs == 3:
-            colums = ['A', 'B', 'C', 'D', 'E', 'F']  # 3 agents
+            colums = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']  # 3 agents
 
         df = pd.DataFrame(self.window, columns=colums)
         df = self.time_stamps_extraction(df, t)
@@ -208,7 +259,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         print(best_sample)
 
         for idx, _ in enumerate(self.agents[:num_max_uavs]):
-            pos_rewards = (idx * 2)
+            pos_rewards = (idx * 3)
             interactions_counter += self.count_security_distance_overpassing(idx, num_max_uavs)
             reward_to_append.append(best_sample[pos_rewards])
         self.EPISODE_REWARD.append(reward_to_append)
@@ -216,8 +267,10 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         # 4: reset agents positions for the next step "t" with best dirs
         for idx, a in enumerate(self.agents[:num_max_uavs]):
-            pos_actions = (idx * 2) + 1
-            self.agents_new_pos(idx, round(best_sample[pos_actions]))
+            cos = (idx * 3) + 1
+            sin = (idx * 3) + 2
+            self.agents_new_pos(idx, cos_sin_to_action_fn(best_sample[cos], best_sample[sin]))
+            #self.agents_new_pos(idx, round(best_sample[pos_actions]))
 
         self.window = self.window[1:, :]
         best_sample = numpy.reshape(best_sample, (1, best_sample.shape[0]))
@@ -254,7 +307,9 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         for j, _ in enumerate(self.agents[:num_max_uavs]):  # agents
             # DON'T CHANGE ORDER OF APPENDS
             window_element.append(best_trajectory[j]["rewards_for_evaluation"][0])
-            window_element.append(best_trajectory[j]["actions"][0])
+            cos, sin = action_to_cos_sin(best_trajectory[j]["actions"][0])
+            window_element.append(cos)
+            window_element.append(sin)
         self.window.append(window_element)
 
         return interactions_counter
@@ -268,36 +323,34 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         timestamps = [start_time_str_datetime + datetime.timedelta(seconds=i) for i in range(rolling_index,
                                                                                              rolling_index +
                                                                                              self.window.shape[0])]
-        # Add the timestamps list as a new column to the DataFrame
+        # Add the timestamps list as a new column to thimport randome DataFrame
         _df['Timestamp'] = timestamps
         return _df
 
-    def best_trajectory_within_horizon_VARIMA(self, train, num_max_uavs, p=3, d=1, q=2, h=10):
+    def best_trajectory_within_horizon_VARIMA(self, train, num_max_uavs, p=3, d=0, q=1, h=10):
+        #if num_max_uavs == 3:
+        #    p, d, q = 1, 0, 2
+        p, d, q = 1, 1, 1
         model = VARIMA(p=p, d=d, q=q)
         print('SUPPORTS MULTIVARIATE', model.supports_multivariate)
         # model = ExponentialSmoothing(seasonal=SeasonalityMode.NONE)
         print(train)
         model.fit(train)
         # len(val)
-        num_samples = 15
-        prediction = model.predict(h, num_samples=num_samples)
+        zMAX = 15
+        prediction = model.predict(h, num_samples=zMAX)
         pred = prediction.all_values(True)
 
         print('               ')
         print('-  PREDICTION  -')
         print('               ')
 
-        # print(pred)
-        # print(pred[:, 0, 0].sum()) # rewards from UAV 1, from column 'A' (first), first sample
-        # print(pred[:, 2, 0].sum()) # rewards from UAV 2, from column 'C' (third), first sample
-        # print(pred[:, 4, 0].sum()) # rewards from UAV 3, from column 'E' (fifth), first sample
-
         best_mean, _best_sample = float("-inf"), None
-        for i in range(0, num_samples):  # samples
+        for i, _ in enumerate(self.agents[:num_max_uavs]):  # samples
             sums = []
             for j, _ in enumerate(self.agents[:num_max_uavs]):  # agents
                 sums.append(
-                    pred[:, j * 2, i].sum())  # if j = 1, step is 2, if j = 2, step is 4 depending on self.agents[:num_max_uavs]
+                    pred[:, j * 3, i].sum())  # if j = 1, step is 2, if j = 2, step is 4, depending on num_agents
 
             aux_mean = sum(sums) / num_max_uavs  # mean of all agents sum reward
 
@@ -305,21 +358,22 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                 best_mean = aux_mean
                 _best_sample = pred[:, :, i]
 
+        # print(best_mean, best_index, best_sample)
+
         # 1: choose first action
         _best_sample = _best_sample[0, :]
-        #print(_best_sample, _best_sample.shape)
+        print(_best_sample, _best_sample.shape)
 
         # 2.0: limit ACTIONS between 0 and 3 (rounding to axes, or casting), removing negatives and above 3
         # 2.5: limit REWARDS between -1 and 1 (rounding to axes, or casting), removing negatives and above 1
         for j, _ in enumerate(self.agents[:num_max_uavs]):  # agents
-            pos_rewards = (j * 2)
-            pos_actions = (j * 2) + 1
-            if num_max_uavs == 1:
-                _best_sample[pos_rewards] = max(min(_best_sample[pos_rewards], 1), 0)  # 1 UAV, minimun 0 reward
-            else:
-                _best_sample[pos_rewards] = max(min(_best_sample[pos_rewards], 1), -1)  # 2 or more UAVs minimun -1 reward
-            _best_sample[pos_actions] = max(min(_best_sample[pos_actions], 3), 0)
-        #print(_best_sample, _best_sample.shape)
+            pos_rewards = (j * 3)
+            pos_actions_cos = (j * 3) + 1
+            pos_actions_sin = (j * 3) + 2
+            _best_sample[pos_rewards] = max(min(_best_sample[pos_rewards], 1), -1)
+            _best_sample[pos_actions_cos] = max(min(_best_sample[pos_actions_cos], 1), -1)
+            _best_sample[pos_actions_sin] = max(min(_best_sample[pos_actions_sin], 1), -1)
+        print(_best_sample, _best_sample.shape)
 
         # 3: TODO execute in simulation
 
