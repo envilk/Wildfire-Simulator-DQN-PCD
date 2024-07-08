@@ -12,6 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from darts import TimeSeries
 from darts.models import VARIMA
+from scipy import linalg
 
 sys.path.append('../')
 sys.path.append('../simulator/')
@@ -168,7 +169,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                              max_agents):  # "max_agents" must go to the max number of agents on training (self.NUM_AGENTS)
             #UAV_idx = 2
             num_max_uavs = UAV_idx + 1
-            num_runs = 1
+            num_runs = 10
             self.strings_to_write_eval = []
             self.overall_interactions = []
             for i in range(0, num_runs):
@@ -222,7 +223,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             str(interactions_counter / 2) + '\n')  # divided by two, to remove duplicates interactions
 
     def evaluation_step(self, UAV_idx, i, interactions_counter, num_max_uavs, t):
-        first_steps_PCD = 31
+        first_steps_PCD = 45
 
         # 1: visualize fire state
         self.reset_step_horizon_conf(UAV_idx, t, False)
@@ -232,11 +233,11 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         if t < first_steps_PCD:
             interactions_counter = self.eval_step_PCD(UAV_idx, i, interactions_counter, num_max_uavs, t)
         else:
-            interactions_counter = self.eval_step_VARIMA(interactions_counter, num_max_uavs, t)
+            interactions_counter = self.eval_step_VARIMA(interactions_counter, num_max_uavs, UAV_idx, t)
 
         return interactions_counter
 
-    def eval_step_VARIMA(self, interactions_counter, num_max_uavs, t):
+    def eval_step_VARIMA(self, interactions_counter, num_max_uavs, UAV_idx, t):
         self.window = numpy.array(self.window)
 
         if num_max_uavs == 1:
@@ -253,6 +254,11 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         start = time.time()
         best_sample = self.best_trajectory_within_horizon_VARIMA(train=series, num_max_uavs=num_max_uavs)
+        # just for printing trajectories
+        #best_sample_PCD = self.best_trajectory_within_horizon(UAV_idx=UAV_idx, t=t, train=series,
+        #                                                         num_max_uavs=num_max_uavs)
+        # just for printing trajectoriesnum_max_uavs, UAV_idx, i, t
+
         end = time.time() - start
         self.times.append(end)
         reward_to_append = []
@@ -287,7 +293,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
     def eval_step_PCD(self, UAV_idx, i, interactions_counter, num_max_uavs, t):
         # 2: calculate accumulated SUM rewards, within the horizon step "h"
         start = time.time()
-        best_trajectory = self.best_trajectory_within_horizon(num_max_uavs, UAV_idx, i, t)
+        best_trajectory = self.best_trajectory_within_horizon(num_max_uavs, UAV_idx, t)
         end = time.time() - start
         self.times.append(end)
         reward_to_append = []
@@ -327,11 +333,11 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         _df['Timestamp'] = timestamps
         return _df
 
-    def best_trajectory_within_horizon_VARIMA(self, train, num_max_uavs, p=3, d=0, q=1, h=10):
-        #if num_max_uavs == 3:
-        #    p, d, q = 1, 0, 2
-        p, d, q = 1, 1, 1
-        model = VARIMA(p=p, d=d, q=q)
+    def best_trajectory_within_horizon_VARIMA(self, train, num_max_uavs, p=1, d=0, q=1, h=10):
+        if num_max_uavs == 3:
+           p, d, q = 1, 0, 1
+        #p, d, q = 1, 1, 1
+        model = VARIMA(p=p, d=d, q=q, trend='n')
         print('SUPPORTS MULTIVARIATE', model.supports_multivariate)
         # model = ExponentialSmoothing(seasonal=SeasonalityMode.NONE)
         print(train)
@@ -381,7 +387,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         # mean = prediction.mean()
         # return prediction, mse(val, mean)
 
-    def best_trajectory_within_horizon(self, num_max_uavs, UAV_idx, i, t):
+    def best_trajectory_within_horizon(self, num_max_uavs, UAV_idx, t):
         best_mean_reward = float('-inf')
         best_trajectory = None
         horizon = 3
@@ -503,6 +509,18 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         if not self.grid.out_of_bounds(pos_to_move) and (pos_to_move not in self.agents_positions):
             self.agents_positions[UAV_idx] = pos_to_move
 
+    def get_agent_pos(self, UAV_idx, new_dir):
+        # directions = [0, 1, 2, 3]  # right, down, left, up
+        # self.selected_dir = random.choice(directions)
+        move_x = [1, 0, -1, 0]
+        move_y = [0, -1, 0, 1]
+
+        # print(self.agents_positions[UAV_idx], move_x[new_dir])
+        pos_to_move = (
+            self.agents_positions[UAV_idx][0] + move_x[new_dir], self.agents_positions[UAV_idx][1] + move_y[new_dir])
+        if not self.grid.out_of_bounds(pos_to_move) and (pos_to_move not in self.agents_positions):
+            self.agents_positions[UAV_idx] = pos_to_move
+
     def visualize_grid_evaluation(self, UAV_idx=-1, num_run=-1, instant=-1):
         agent_counts = numpy.zeros((self.grid.width, self.grid.height))
         for cell_content, (x, y) in self.grid.coord_iter():
@@ -516,6 +534,13 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             # cell is burning
             if agent_count == 1 and (not cell_content[0].is_burning() or cell_content[0].get_fuel() == 0):
                 agent_count = 0
+
+            # draw groundtruth trajectory for representation (the drawing order matters)
+            if x == 1 and y == 1:
+                agent_count = 4
+            elif x == 0 and y == 0: # draw groundtruth trajectory for representation
+                agent_count = 5
+
             agent_counts[y][x] = agent_count
         # Plot using seaborn, with a size of 5x5
         plt.figure(2)

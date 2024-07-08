@@ -62,8 +62,8 @@ if HORIZON_EVAL:
 
 BATCH_SIZE = 90
 N_ACTIONS = 4
-WIDTH = 60  # in python [height, width] for grid, in js [width, heigh]
-HEIGHT = 60
+WIDTH = 50  # in python [height, width] for grid, in js [width, heigh]
+HEIGHT = 50
 
 # model | forest params
 
