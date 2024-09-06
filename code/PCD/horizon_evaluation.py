@@ -18,7 +18,7 @@ from Space_Grid_Setter_Getter import MultiGrid
 from common_fixed_variables import *
 from paths import *
 
-
+# class for PCD algorithm
 class HorizonEvaluation(wildfire_model.WildFireModel):
 
     # set the enviroment (grid, schedule, fire agents), new UAVs, eval parameters (step counter, ac reward,
@@ -38,6 +38,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         self.reset()
 
+    # resets simulator
     def reset(self):
         self.unique_agents_id = 0
         # Inverted width and height order, because of matrix accessing purposes, like in many examples:
@@ -58,13 +59,14 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         for a in range(0, self.NUM_AGENTS):
             aux_UAV = agents.UAV(self.unique_agents_id, self)
             y_center += a if a % 2 == 0 else -a
-            self.agents.append(aux_UAV)  # FIXME: ñapa?, arreglar porque solo se usa en evaluation()?
+            self.agents.append(aux_UAV)
             self.agents_positions.append((x_center, y_center + 1))
             self.unique_agents_id += 1
 
         self.datacollector = mesa.DataCollector()
         self.new_direction = [0 for a in range(0, self.NUM_AGENTS)]
 
+    # method to plot accumulated simulation rewards for each UAV amount
     def plot_durations(self, num_max_uavs):
         plt.figure(1)
         plt.clf()
@@ -84,6 +86,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             plt.plot(to_plot, c=cmap_rewards.to_rgba(agent_idx + 1))
         plt.pause(0.001)  # pause a bit so that plots are updated
 
+    # method to measure the distance between two UAV, based on the euclidean distance
     def count_security_distance_overpassing(self, idx, num_max_uavs):
         count = 0
 
@@ -102,6 +105,9 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         return count
 
+    # method that allows to simulate a concrete wildfire with certain conditions, during specific
+    # number of iterations. The method takes each amount of UAV (until "max_agents"), and executes "num_run" 
+    # simulations with "t" steps each. 
     def evaluation(self):
         max_agents = self.NUM_AGENTS
 
@@ -119,6 +125,12 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             for i in range(0, num_runs):
                 interactions_counter = 0
                 print('-------- NUM_RUN: ', i, '--------')
+
+                # each simulation requires to reset the simulator parameters, as well as the accumulated reward.
+                # also, each step (fixed grids) of the new simulation, is previously obtained in order 
+                # to extend Mesa framework functionality, so stepping back 1 or more steps is possible, 
+                # maintaining its lineality. For example, being on step "t", going to "t-1", and back
+                # to "t", doesn't change the step "t" grid.
                 self.EPISODE_REWARD = []
                 self.reset()
                 self.obtain_grids(num_run=i)
@@ -130,6 +142,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                     if t == BATCH_SIZE - 1:
                         break
 
+                    # evaluates a certain step execution within a certain horizon "h"
                     interactions_counter, states_and_position_mixed = self.evaluation_step(UAV_idx, i,
                                                                                            interactions_counter,
                                                                                            num_max_uavs, t)
@@ -154,12 +167,15 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         print("--- TIMES ---")
         [print(times[idx]) for idx in range(0, max_agents)]
 
+    # method to create a dataset with all executions done (not necessary for PCD, but can be used for 
+    # other algorithms).
     def write_h5py_file_LSTM_dataset(self, data):
         # Create a new HDF5 file
         with h5py.File('dataset.hdf5', 'w') as f:
             # Create a dataset within the file to store your data
             dset = f.create_dataset('data', data=data)
 
+    # method to write obtained metrics along all the simulations in files with ".txt" format
     def write_metrics_files(self, num_max_uavs):
         # CHANGE STR(0) IF PARALLELIZATION IS NEEDED. PUT AS MANY NUMBERS AS CPUS ARE USED
         # (THIS AVOID COPYING PROJECTS UNNECESSARILY).
@@ -172,6 +188,8 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                   'w') as f2:
             f2.writelines(self.overall_interactions)
 
+    # this method introduces the calculated metrics of a simulation, into the corresponding data structures to 
+    # plot them or store them into files
     def calculate_metrics(self, i, interactions_counter, num_max_uavs):
         # plot individual rewards at the end of each run (complete simulation)
         plt.figure(1)
@@ -188,33 +206,35 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             str(interactions_counter / 2) + '\n')  # divided by two, to remove duplicates interactions
 
     def evaluation_step(self, UAV_idx, i, interactions_counter, num_max_uavs, t):
-        # 1: visualize fire state
+        # 1: visualizes fire state
         self.reset_step_horizon_conf(UAV_idx, t, False)
         self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
         self.grid.remove_UAVs()
 
         start = time.time()
-        # 2: calculate accumulated SUM rewards, within the horizon step "h"
+        # 2: calculates accumulated SUM rewards, within the horizon step "h"
         best_trajectory = self.best_trajectory_within_horizon(num_max_uavs, UAV_idx, i, t)
         end = time.time() - start
         self.times.append(end)
         reward_to_append = []
 
+        # 3: calculates metrics 
         for idx, _ in enumerate(self.agents[:num_max_uavs]):
             interactions_counter += self.count_security_distance_overpassing(idx, num_max_uavs)
             reward_to_append.append(best_trajectory[idx]["rewards_for_evaluation"][0])
         self.EPISODE_REWARD.append(reward_to_append)
         self.eval_ac_reward += torch.tensor(reward_to_append, device=DEVICE)
 
-        # 4: reset agents positions for the next step "t" with best dirs
+        # 4: resets agents positions for the next step "t" with best dirs
         for idx, a in enumerate(self.agents[:num_max_uavs]):
             self.agents_new_pos(idx, best_trajectory[idx]["actions"][0])
 
-        # 5: build dataset
+        # 5: builds dataset (not necessary for PCD)
         states_and_position_mixed = self.build_LSTM_dataset_instance(best_trajectory, num_max_uavs)
 
         return interactions_counter, states_and_position_mixed
 
+    # method for building LSTM dataset instances (not necessary for PCD)
     def build_LSTM_dataset_instance(self, best_trajectory, num_max_uavs):
         list_1 = [dict["states"][0] for dict in best_trajectory]
         list_2 = []
@@ -233,21 +253,28 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         return states_and_position_mixed
 
-
+    # method for obtaining best trajectory for 1 UAV, from step "t", based on a specific horizon "h". 
+    # This method builds "Z" trajectories, and checks which is the best one to execute, taking into account
+    # how the wildfire would evolve "h" steps in the future. At the end, this is the core of the  
+    # "Predictive Coordinate Descent (PCD)" behaviour
     def best_trajectory_within_horizon(self, num_max_uavs, UAV_idx, i, t):
         best_mean_reward = float('-inf')
         best_trajectory = None
         horizon = 3
         Z = 15
         for z in range(Z):
+            # resetting grid for starting with the process
             self.reset_step_horizon_conf(UAV_idx, t, False)
             best_coordinate_descent = [{"actions": [], "rewards": [], "rewards_for_evaluation": [], "states": []}
                                        for _ in range(num_max_uavs)]
+            
+            # iterates through the future "h" steps of the horizon to collect each UAV action, reward, etc
             for step in range(horizon):
                 # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
                 for idx, a in enumerate(self.agents[:num_max_uavs]):
+                    # move agent to a position
                     moved_once_in_loop = self.select_and_move_agent(a, best_coordinate_descent, idx, num_max_uavs, step)
-
+                    # reset position to check next UAV
                     self.finalize_move(UAV_idx, a, best_coordinate_descent, idx, moved_once_in_loop, num_max_uavs, step,
                                        t)
 
@@ -268,6 +295,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
         return best_trajectory
 
+    # method for resetting each UAV position to which it was moved from on step "t"
     def finalize_move(self, UAV_idx, a, best_coordinate_descent, idx, moved_once_in_loop, num_max_uavs, step, t):
         # reset for each tried action
         aux_horizon = t + step
@@ -283,6 +311,8 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
 
             # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
 
+    # method for selecting possible actions and execute them in a coordinate descent way, which means
+    # that for one UAV, in a step "t", it is going to check all possible directions it can take
     def select_and_move_agent(self, a, best_coordinate_descent, idx, num_max_uavs, step):
         oposite_idx = 2  # to move agent the opposite way
         tested_first_possible_action = False
@@ -292,16 +322,19 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         possible_actions = [a for a in range(N_ACTIONS)]
         if step == 0: possible_actions = [SYSTEM_RANDOM.choice(possible_actions)]
         for action in possible_actions:
+            # selects action
             a.selected_dir = action
+            # executes action
             moved = a.move()
             # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
 
+            # checks state and rewards
             states, reward, rewards_for_evaluation = self.state()
 
             if step == 0:  # random start in coordinate descent iterations
                 self.append_agent_step(states, action, best_coordinate_descent, idx, reward,
                                        rewards_for_evaluation)
-            else:  # try all actions, like normally with all 'Z' iterations
+            else:  # try all actions, like usually with all 'Z' iterations
                 tested_first_possible_action = self.update_best_reward(states, action, best_coordinate_descent,
                                                                        best_reward,
                                                                        idx, reward,
@@ -312,6 +345,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                                                            oposite_idx, possible_actions)
         return moved_once_in_loop
 
+    # method to check if a certain UAV was moved
     def check_if_agent_moved(self, a, action, moved, moved_once_in_loop, oposite_idx, possible_actions):
         if moved:
             moved_once_in_loop = True
@@ -321,6 +355,9 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             # TODO self.visualize_grid_evaluation(UAV_idx=UAV_idx, num_run=i, instant=t)
         return moved_once_in_loop
 
+    # method to update rewards of the best trajectory, based on the case
+    # if not tested first possible actions, then everything is appended in the data structures 
+    # for the first time, otherwie it is indexed
     def update_best_reward(self, states, action, best_coordinate_descent, best_reward, idx, reward,
                            rewards_for_evaluation,
                            step, tested_first_possible_action):
@@ -337,18 +374,21 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                 best_coordinate_descent[idx]["states"][step] = states[idx]
         return tested_first_possible_action
 
+    # method for appending rewards, actions, and states to the best trajectory for the first time
     def append_agent_step(self, states, action, best_coordinate_descent, idx, reward, rewards_for_evaluation):
         best_coordinate_descent[idx]["rewards_for_evaluation"].append(rewards_for_evaluation[idx])
         best_coordinate_descent[idx]["rewards"].append(reward[idx])
         best_coordinate_descent[idx]["actions"].append(action)
         best_coordinate_descent[idx]["states"].append(states[idx])
 
+    # method for applying noise to a reward based on a normal distribution
     def apply_noise(self, reward):
         if NOISE:
             noise = numpy.random.normal(reward, OMEGA)
             reward += noise
         return reward
 
+    # method for setting the possition of a UAV
     def agents_new_pos(self, UAV_idx, new_dir):
         # directions = [0, 1, 2, 3]  # right, down, left, up
         # self.selected_dir = random.choice(directions)
@@ -361,6 +401,7 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         if not self.grid.out_of_bounds(pos_to_move) and (pos_to_move not in self.agents_positions):
             self.agents_positions[UAV_idx] = pos_to_move
 
+    # method for visualizing the simulator on each step, into ".png" images
     def visualize_grid_evaluation(self, UAV_idx=-1, num_run=-1, instant=-1):
         agent_counts = numpy.zeros((self.grid.width, self.grid.height))
         for cell_content, (x, y) in self.grid.coord_iter():
@@ -392,6 +433,11 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
         title = path + 't_' + str(instant) + '.png'
         plt.savefig(title)
 
+    # sets a new grid in "self.grid" attribute, based on step "t". This function is messy,
+    # since code isn't optimized and was a difficult idea to implement with Mesa framework. 
+    # Not really recommended to change references to this method, nor its parameters.
+    # Just change if it is a essential modification, but make sure you understand everything first,
+    # some bugs or errors can emerge from this.
     def reset_step_horizon_conf(self, UAV_idx, t, iterating):
         # 0: set actual grid, and reset scheduler
         if self.grid:
@@ -407,6 +453,8 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                         UAV = True
                         aux_agents.append(c)
 
+        # 2: place agent in new "self.grid" attribute, based on if there was a UAV on it, and if
+        #    the method was called during a simulation iteration or not
         for idx, a in enumerate(self.agents[:UAV_idx + 1]):
             if not UAV:
                 if iterating:
@@ -418,8 +466,10 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             elif not iterating:
                 self.grid.remove_UAVs()
 
+        # resetting scheduler is also necessary for changing "self.grid" attribute
         self.reset_scheduler_for_step_horizon()
 
+    # method for resetting the scheduler of the Mesa framework. This is done to avoid bugs or small errors
     def reset_scheduler_for_step_horizon(self):
         self.schedule = mesa.time.SimultaneousActivation(self)
         ids = []
@@ -433,15 +483,20 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
                 self.schedule.add(coord[0][0])
                 ids.append(coord[0][0].unique_id)
 
+    # method that executes an entire simulation on a grid, and stores all time steps in an attribute
+    # called "self.grids", in order to be used for checking the best trajetory for 1 or more UAV, 
+    # with a certain horizon "h"
     def obtain_grids(self, _type='', num_run=0):
         if self.grids:  # make sure copies don't explode memory
             del self.grids
         self.grids = []
 
+        # iterate through all steps in a simulation
         for t in itertools.count():
             self.reset_scheduler_for_step_horizon()
             aux_grid = self.grid
 
+            # check all the fire agents information and storing them before going to the next step
             agents_state_list_to_show = []
             for coord in aux_grid.coord_iter():
                 agents_state_list_to_show.append(int(coord[0][0].is_burning()))
@@ -460,6 +515,8 @@ class HorizonEvaluation(wildfire_model.WildFireModel):
             if BATCH_SIZE == t:
                 break
 
+    # base method from Mesa framework, used in "obtain_grids" method, for executing the entire simulation
+    # and store the information
     def step(self):
         self.datacollector.collect(self)
         self.schedule.step()
